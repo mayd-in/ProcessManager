@@ -1,6 +1,8 @@
 # ProcessManager
 A simple application for managing the processes you started
 
+![Sample Screenshot](/assets/screenshot.png)
+
 ## Requirements
 
 * C++11 compiler
