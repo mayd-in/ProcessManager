@@ -29,12 +29,13 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 
 set(PROJECT_SOURCES
         main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        processmodel.cpp
-        processmodel.h
-        processview.cpp
-        processview.h
+
+        src/mainwindow.cpp
+        src/mainwindow.h
+        src/processmodel.cpp
+        src/processmodel.h
+        src/processview.cpp
+        src/processview.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
