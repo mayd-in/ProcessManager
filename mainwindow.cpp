@@ -1,54 +1,48 @@
 #include "mainwindow.h"
+#include "processmodel.h"
+#include "processview.h"
 
+#include <QApplication>
 #include <QVBoxLayout>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QMessageBox>
 #include <QTableView>
 #include <QHeaderView>
-#include <QStandardItemModel>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    auto directoryLineEdit = new QLineEdit;
-    auto executableLineEdit = new QLineEdit;
-    auto argumentsLineEdit = new QLineEdit;
+    mDirectoryLineEdit = new QLineEdit;
+    mExecutableLineEdit = new QLineEdit;
+    mArgumentsLineEdit = new QLineEdit;
 
     auto formLayout = new QFormLayout;
-    formLayout->addRow(tr("Directory:"), directoryLineEdit);
-    formLayout->addRow(tr("Executable:"), executableLineEdit);
-    formLayout->addRow(tr("Arguments:"), argumentsLineEdit);
+    formLayout->addRow(tr("Directory:"), mDirectoryLineEdit);
+    formLayout->addRow(tr("Executable:"), mExecutableLineEdit);
+    formLayout->addRow(tr("Arguments:"), mArgumentsLineEdit);
 
     auto startPushButton = new QPushButton(tr("Start Process"));
+    connect(startPushButton, &QPushButton::clicked, this, &MainWindow::startProcess);
 
-    auto model = new QStandardItemModel(1, 5);
-    model->setHeaderData(0, Qt::Horizontal, tr("PID"));
-    model->setHeaderData(1, Qt::Horizontal, tr("Exec Name"));
-    model->setHeaderData(2, Qt::Horizontal, tr("Arguments"));
-    model->setHeaderData(3, Qt::Horizontal, tr("Running Duration"));
-    model->setHeaderData(4, Qt::Horizontal, "");
+    mProcessModel = new ProcessModel(this);
 
-    for (int row = 0; row < model->rowCount(); ++row) {
-        for (int column = 0; column < model->columnCount(); ++column) {
-            QStandardItem *item = new QStandardItem(QString("row %0, column %1").arg(row).arg(column));
-            model->setItem(row, column, item);
-        }
-    }
-
-    auto tableView = new QTableView;
-    tableView->setModel(model);
-    tableView->verticalHeader()->hide();
-    tableView->horizontalHeader()->setStretchLastSection(true);
-    tableView->resizeColumnsToContents();
-    tableView->setIndexWidget(model->index(0, 4), new QPushButton(tr("Kill")));
+    mTableView = new ProcessView;
+    mTableView->setModel(mProcessModel);
+    mTableView->setSelectionBehavior(QTableView::SelectRows);
+    mTableView->setSelectionMode(QTableView::SingleSelection);
+    mTableView->verticalHeader()->hide();
+    mTableView->horizontalHeader()->setStretchLastSection(true);
+    mTableView->resizeColumnsToContents();
 
     auto mainLayout = new QVBoxLayout;
     mainLayout->addLayout(formLayout);
     mainLayout->addWidget(startPushButton);
-    mainLayout->addWidget(tableView);
+    mainLayout->addWidget(mTableView);
 
     auto centralWidget = new QWidget;
+    centralWidget->setMinimumWidth(600);
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 }
@@ -57,3 +51,25 @@ MainWindow::~MainWindow()
 {
 }
 
+void MainWindow::startProcess()
+{
+    QString directory = mDirectoryLineEdit->text().trimmed();
+    if (!directory.isEmpty())
+        directory += "/";
+    QString executable = mExecutableLineEdit->text().trimmed();
+    QStringList arguments = mArgumentsLineEdit->text().split(" ", Qt::SkipEmptyParts);
+
+    if (executable.isEmpty()) {
+        QMessageBox::warning(this, QApplication::applicationDisplayName(),
+                             tr("Executable field is empty"));
+        return;
+    }
+
+    auto process = new Process(directory, executable, arguments, this);
+    connect(process, &QProcess::started, mProcessModel, [this, process](){ mProcessModel->onProcessStarted(process); });
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), mProcessModel,
+            [this, process](int /*exitCode*/, QProcess::ExitStatus /*exitStatus*/){
+        mProcessModel->onProcessStopped(process);
+    });
+    process->start();
+}

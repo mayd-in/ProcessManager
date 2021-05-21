@@ -31,6 +31,10 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
         mainwindow.h
+        processmodel.cpp
+        processmodel.h
+        processview.cpp
+        processview.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
